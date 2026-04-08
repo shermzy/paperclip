@@ -104,16 +104,8 @@ async function fetchPendingRequests() {
     filter: {
       and: [
         {
-          or: [
-            {
-              property: "Workflow Stage",
-              select: { equals: "Requested" },
-            },
-            {
-              property: "Workflow Stage",
-              select: { equals: "Triage" },
-            },
-          ],
+          property: "Project",
+          select: { equals: "Triage Project" },
         },
         {
           property: "Paperclip Issue ID",
