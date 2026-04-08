@@ -1,0 +1,32 @@
+schema: paperclip/v1
+agents:
+  intime-ceo:
+    metadata:
+      workspace:
+        allowedPaths:
+          - "E:\\Intime"
+  intime-product-manager:
+    metadata:
+      workspace:
+        allowedPaths:
+          - "E:\\Intime"
+  intime-implementation-agent:
+    metadata:
+      workspace:
+        allowedPaths:
+          - "E:\\Intime"
+  intime-qa-release-agent:
+    metadata:
+      workspace:
+        allowedPaths:
+          - "E:\\Intime"
+  xero-expert:
+    metadata:
+      workspace:
+        allowedPaths:
+          - "E:\\Intime"
+  notion-expert:
+    metadata:
+      workspace:
+        allowedPaths:
+          - "E:\\Intime"
