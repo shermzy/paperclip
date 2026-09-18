@@ -26,6 +26,54 @@ export const label = "Claude Code";
 
 export const SANDBOX_INSTALL_COMMAND = "npm install -g @anthropic-ai/claude-code";
 
+export const OMNIROUTE_AUTO_MODEL_IDS = [
+  "auto/best-chaos",
+  "auto/best-chat",
+  "auto/best-coding",
+  "auto/best-coding-fast",
+  "auto/best-fast",
+  "auto/best-free",
+  "auto/best-reasoning",
+  "auto/best-vision",
+  "auto/chaos",
+  "auto/chat",
+  "auto/cheap",
+  "auto/claude-opus",
+  "auto/claude-sonnet",
+  "auto/coding",
+  "auto/coding:cheap",
+  "auto/coding:fast",
+  "auto/coding:free",
+  "auto/coding:pro",
+  "auto/coding:reliable",
+  "auto/fast",
+  "auto/gemini",
+  "auto/gemma",
+  "auto/glm",
+  "auto/llama",
+  "auto/mimo",
+  "auto/minimax",
+  "auto/multimodal",
+  "auto/offline",
+  "auto/pro-chat",
+  "auto/pro-coding",
+  "auto/pro-fast",
+  "auto/pro-reasoning",
+  "auto/pro-vision",
+  "auto/reasoning",
+  "auto/reasoning:pro",
+  "auto/smart",
+  "auto/subscription",
+  "auto/thrifty",
+  "auto/vision",
+  "auto/zai",
+  "codex-auto-review",
+  "codex/codex-auto-review",
+  "cx/codex-auto-review",
+  "openrouter/openrouter/auto",
+  "openrouter/openrouter/auto-beta",
+] as const;
+
 export const models = [
   { id: "claude-opus-4-8", label: "Claude Opus 4.8" },
   { id: "claude-sonnet-5", label: "Claude Sonnet 5" },
@@ -38,6 +86,7 @@ export const models = [
   { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
   { id: "claude-sonnet-4-5", label: "Claude Sonnet 4.5" },
   { id: "claude-haiku-4-5", label: "Claude Haiku 4.5" },
+  ...OMNIROUTE_AUTO_MODEL_IDS.map((id) => ({ id, label: `OmniRoute ${id}` })),
 ];
 
 export const agentConfigurationDoc = `# claude_local agent configuration

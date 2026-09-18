@@ -112,7 +112,7 @@ describe("probeClaudeModelRoute", () => {
   it("distinguishes an unavailable provider from an absent custom model", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: false } as Response);
 
-    await expect(probeClaudeModelRoute("auto/claude-sonnet", env)).resolves.toBe("provider-unavailable");
+    await expect(probeClaudeModelRoute("custom/omniroute-model", env)).resolves.toBe("provider-unavailable");
   });
 
   it("reports missing credentials separately", async () => {

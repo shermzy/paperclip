@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CLAUDE_LOCAL_MODEL, resolveClaudeModel } from "./index.js";
+import {
+  DEFAULT_CLAUDE_LOCAL_MODEL,
+  models,
+  OMNIROUTE_AUTO_MODEL_IDS,
+  resolveClaudeModel,
+} from "./index.js";
 
 describe("Claude model defaults", () => {
   it.each([undefined, null, "", "  "])("uses Opus 5 for an unset model (%j)", (model) => {
@@ -21,5 +26,15 @@ describe("Claude model defaults", () => {
   ])("keeps provider-specific defaults for %j", (env) => {
     expect(resolveClaudeModel(undefined, env)).toBe("");
     expect(resolveClaudeModel("provider-model", env)).toBe("provider-model");
+  });
+
+  it("includes the observed OmniRoute auto model IDs in the fallback catalog", () => {
+    const ids = models.slice(-OMNIROUTE_AUTO_MODEL_IDS.length).map((model) => model.id);
+    expect(ids).toEqual([...OMNIROUTE_AUTO_MODEL_IDS]);
+    expect(
+      models
+        .slice(-OMNIROUTE_AUTO_MODEL_IDS.length)
+        .every((model) => model.label.startsWith("OmniRoute ")),
+    ).toBe(true);
   });
 });
