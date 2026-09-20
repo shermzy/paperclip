@@ -1,0 +1,44 @@
+name: Upstream Sync
+
+# Keeps shermzy/paperclip `master` fast-forwarded to paperclipai/paperclip `master`.
+# Runs on the self-hosted Linux runner. Direct push only — fails on divergence.
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 10
+    steps:
+      - name: Checkout fork master
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync from upstream
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/paperclipai/paperclip.git 2>/dev/null || true
+          git fetch upstream master
+          git checkout master
+          if git merge --ff-only upstream/master; then
+            echo "Fast-forwarded to $(git rev-parse --short HEAD)"
+          else
+            echo "::error::fork/master has diverged from upstream/master — manual rebase required, not force-pushing."
+            exit 1
+          fi
+          git push origin master
