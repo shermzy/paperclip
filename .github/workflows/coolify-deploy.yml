@@ -1,0 +1,102 @@
+name: Coolify Deploy
+
+# agent.t3.group runs the pinned image ghcr.io/paperclipai/paperclip:<calver>.
+# This workflow moves the pin to the latest stable upstream release
+# (paperclipai/paperclip tag v<calver> -> image <calver>) and redeploys.
+# The git fork itself is kept current by Upstream Sync (upstream-sync.yml);
+# this workflow handles the Coolify side, which tracks a docker image tag,
+# not a git branch. Runs daily after Upstream Sync, and on demand.
+
+on:
+  schedule:
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag override (calver without leading v, e.g. 2026.916.1). Empty = latest stable upstream release."
+        required: false
+        default: ""
+      force_redeploy:
+        description: "Redeploy even if the pin already matches the target"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coolify-deploy
+  cancel-in-progress: false
+
+env:
+  COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+  COOLIFY_APP_UUID: ${{ secrets.COOLIFY_APP_UUID }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Resolve target image tag
+        id: target
+        env:
+          INPUT_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
+          else
+            TAG="$(curl -sS --max-time 30 https://api.github.com/repos/paperclipai/paperclip/releases/latest | jq -r '.tag_name')"
+            [ -n "$TAG" ] && [ "$TAG" != "null" ] || { echo "::error::could not resolve latest upstream release"; exit 1; }
+          fi
+          TAG="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Target image tag: $TAG"
+
+      - name: Update pin and redeploy on Coolify
+        env:
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          TARGET_TAG: ${{ steps.target.outputs.tag }}
+          FORCE: ${{ inputs.force_redeploy }}
+        run: |
+          set -euo pipefail
+          AUTH=(-H "Authorization: Bearer $COOLIFY_API_TOKEN")
+          api() { curl -sS --max-time 30 "$@"; }
+
+          CURRENT="$(api "${AUTH[@]}" "$COOLIFY_URL/api/v1/applications/$COOLIFY_APP_UUID" | jq -r '.docker_registry_image_tag')"
+          echo "Current Coolify tag: $CURRENT / target: $TARGET_TAG"
+          if [ "$CURRENT" = "$TARGET_TAG" ] && [ "$FORCE" != "true" ]; then
+            echo "Already up to date — nothing to do."
+            exit 0
+          fi
+
+          echo "Updating pin $CURRENT -> $TARGET_TAG ..."
+          api -X PATCH "${AUTH[@]}" -H 'Content-Type: application/json' \
+            -d "{\"docker_registry_image_tag\":\"$TARGET_TAG\"}" \
+            "$COOLIFY_URL/api/v1/applications/$COOLIFY_APP_UUID" | head -c 200; echo
+
+          BODY="$(api -X POST "${AUTH[@]}" "$COOLIFY_URL/api/v1/deploy?uuid=$COOLIFY_APP_UUID")"
+          DEP_UUID="$(echo "$BODY" | jq -r '.deployments[0].deployment_uuid // empty')"
+          [ -n "$DEP_UUID" ] || { echo "::error::no deployment_uuid in response: $(echo "$BODY" | head -c 300)"; exit 1; }
+          echo "Deployment: $DEP_UUID"
+
+          elapsed=0; status="queued"
+          while [ "$elapsed" -lt 1500 ]; do
+            status="$(api "${AUTH[@]}" "$COOLIFY_URL/api/v1/deployments/$DEP_UUID" | jq -r '.status // "unknown"')"
+            echo "  [${elapsed}s] status=$status"
+            case "$status" in
+              finished) break ;;
+              failed|cancelled|error) echo "::error::deployment $status (see Coolify UI)"; exit 1 ;;
+            esac
+            sleep 15; elapsed=$((elapsed + 15))
+          done
+          [ "$status" = "finished" ] || { echo "::error::timed out waiting for deployment"; exit 1; }
+
+          echo "Verifying https://agent.t3.group ..."
+          code="$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' https://agent.t3.group || echo 000)"
+          echo "HTTP $code"
+          case "$code" in
+            2*|3*) echo "OK — agent.t3.group is serving." ;;
+            *) echo "::warning::unexpected HTTP $code from agent.t3.group (deployment itself finished)" ;;
+          esac
