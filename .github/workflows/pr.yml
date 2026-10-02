@@ -2,6 +2,9 @@ name: PR
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled, edited]
+  schedule:
+    - cron: "25 20 * * *"
 
 permissions:
   actions: read
@@ -10,6 +13,11 @@ permissions:
 
 jobs:
   ci:
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       contains(github.event.pull_request.labels.*.name, 'release'))
     # Master requires CODEOWNERS review for .github/**, including this workflow.
-    # The AWS runner group permits pr-trusted.yml@refs/heads/master.
-    uses: paperclipai/paperclip/.github/workflows/pr-trusted.yml@master
+    # The trusted workflow is pinned to its reviewed first-stage commit.
+    uses: shermzy/paperclip/.github/workflows/pr-trusted.yml@43960f468ded97b93cf3c55ca830e9366daad294

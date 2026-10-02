@@ -19,13 +19,9 @@ on:
         type: boolean
         default: false
   pull_request:
-    branches:
-      - master
-    types:
-      - opened
-      - reopened
-      - synchronize
-      - labeled
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled, edited]
+  schedule:
+    - cron: "11 18 * * *"
 
 concurrency:
   group: storybook-visual-${{ inputs.deploy_preview && github.run_id || 'visual' }}-${{ github.event.pull_request.number || github.ref }}
@@ -37,9 +33,7 @@ permissions:
 jobs:
   visual:
     name: Storybook visual regression
-    if: >-
-      (github.event_name == 'workflow_dispatch' && !inputs.deploy_preview) ||
-      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'storybook-visual'))
+    if: ${{ github.event_name == 'workflow_dispatch' && !inputs.deploy_preview || github.event_name == 'schedule' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'release')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
 

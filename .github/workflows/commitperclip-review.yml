@@ -2,10 +2,9 @@ name: commitperclip PR Review
 
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled, edited]
 
-# Always runs from base branch context — never executes PR code.
-# pull_request_target gives access to secrets for untrusted fork PRs.
+# Runs from the base branch and only for same-repository release PRs.
 
 permissions:
   pull-requests: write
@@ -14,6 +13,7 @@ permissions:
 
 jobs:
   review:
+    if: ${{ github.event_name != 'pull_request' && github.event_name != 'pull_request_target' || (github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'release')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

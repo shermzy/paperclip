@@ -2,14 +2,9 @@ name: Docker Runner check
 
 on:
   pull_request:
-    paths:
-      - .github/workflows/docker-runner-check.yml
-      - Dockerfile
-      - .dockerignore
-      - scripts/check-docker-runner-cache.sh
-      - packages/paperclip-runner/rust-toolchain.toml
-      - packages/paperclip-runner/runner/**
-      - packages/paperclip-runner/protocol/**
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled, edited]
+  schedule:
+    - cron: "25 20 * * *"
 
 permissions: {}
 
@@ -19,6 +14,7 @@ concurrency:
 
 jobs:
   runner:
+    if: ${{ (github.event_name != 'pull_request' && github.event_name != 'pull_request_target' || (github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'release'))) }}
     name: Compile isolated native Runner
     runs-on: ubuntu-latest
     timeout-minutes: 20
